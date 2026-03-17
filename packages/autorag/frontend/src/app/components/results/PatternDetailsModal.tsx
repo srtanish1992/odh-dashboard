@@ -1,9 +1,12 @@
 import React from 'react';
 import {
+  Content,
+  ContentVariants,
   DescriptionList,
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  ExpandableSection,
   Flex,
   FlexItem,
   Modal,
@@ -13,38 +16,32 @@ import {
   Progress,
   ProgressMeasureLocation,
   Radio,
+  Stack,
+  StackItem,
   Tab,
   Tabs,
   TabTitleText,
   Title,
 } from '@patternfly/react-core';
-
-type ScoreEntry = { mean: number; ci_low: number; ci_high: number };
-
-type PatternData = {
-  name: string;
-  settings: Record<string, Record<string, unknown>>;
-  scores: Record<string, ScoreEntry>;
-  [key: string]: unknown;
-};
+import type {
+  AutoRAGEvaluationResult,
+  AutoRAGPattern,
+  AutoRAGPatternScoreMetric,
+  AutoRAGPatternSettings,
+} from '~/app/types/autoragPattern';
 
 type PatternDetailsModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  data: PatternData;
+  data: AutoRAGPattern;
+  evaluationResults?: AutoRAGEvaluationResult[];
 };
 
 const OVERVIEW_KEY = 'pattern_information';
+const SAMPLE_QA_KEY = 'sample_qa';
 
 const humanize = (key: string): string =>
   key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-const isScoreEntry = (value: unknown): value is ScoreEntry =>
-  typeof value === 'object' &&
-  value !== null &&
-  'mean' in value &&
-  'ci_low' in value &&
-  'ci_high' in value;
 
 const KeyValueList: React.FC<{ entries: Record<string, unknown> }> = ({ entries }) => (
   <DescriptionList isHorizontal>
@@ -67,12 +64,15 @@ const scoreTypeLabels: Record<ScoreType, string> = {
 };
 /* eslint-enable camelcase */
 
-const ScoresList: React.FC<{ scores: Record<string, ScoreEntry>; scoreType: ScoreType }> = ({
-  scores,
-  scoreType,
-}) => (
+const ScoresList: React.FC<{
+  scores: Record<string, AutoRAGPatternScoreMetric | undefined>;
+  scoreType: ScoreType;
+}> = ({ scores, scoreType }) => (
   <DescriptionList isHorizontal>
     {Object.entries(scores).map(([key, score]) => {
+      if (!score) {
+        return null;
+      }
       const value = score[scoreType];
       return (
         <DescriptionListGroup key={key}>
@@ -93,19 +93,117 @@ const ScoresList: React.FC<{ scores: Record<string, ScoreEntry>; scoreType: Scor
   </DescriptionList>
 );
 
-const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({ isOpen, onClose, data }) => {
+const settingsSectionEntries = (
+  settings: AutoRAGPatternSettings,
+  section: string,
+): Record<string, unknown> => {
+  for (const [key, value] of Object.entries(settings)) {
+    if (key === section) {
+      return value;
+    }
+  }
+  return {};
+};
+
+const SampleQAEntry: React.FC<{ result: AutoRAGEvaluationResult }> = ({ result }) => {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--pf-t--global--border--color--default)',
+        borderRadius: 'var(--pf-t--global--border--radius--small)',
+        padding: 'var(--pf-t--global--spacer--md)',
+        marginBottom: 'var(--pf-t--global--spacer--md)',
+      }}
+    >
+      <Flex>
+        <FlexItem flex={{ default: 'flex_1' }}>
+          <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
+            Question
+          </Content>
+          <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
+            {result.question}
+          </Content>
+        </FlexItem>
+        <FlexItem flex={{ default: 'flex_1' }}>
+          <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
+            Answer
+          </Content>
+          <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
+            {result.answer}
+          </Content>
+        </FlexItem>
+      </Flex>
+      <ExpandableSection
+        toggleText={`View expected answer (${result.correct_answers.length})`}
+        isExpanded={isExpanded}
+        onToggle={(_e, expanded) => setIsExpanded(expanded)}
+        isIndented
+      >
+        <Stack hasGutter>
+          {result.correct_answers.map((answer, i) => (
+            <StackItem key={`answer-${result.question_id}-${i}`}>
+              <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
+                Expected answer {i + 1}
+              </Content>
+              <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
+                {answer}
+              </Content>
+            </StackItem>
+          ))}
+        </Stack>
+      </ExpandableSection>
+    </div>
+  );
+};
+
+const SampleQAContent: React.FC<{ results: AutoRAGEvaluationResult[] }> = ({ results }) => (
+  <Stack hasGutter>
+    <StackItem>
+      <Title headingLevel="h3">Sample Q&A</Title>
+    </StackItem>
+    {results.map((result) => (
+      <StackItem key={result.question_id}>
+        <SampleQAEntry result={result} />
+      </StackItem>
+    ))}
+  </Stack>
+);
+
+const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
+  isOpen,
+  onClose,
+  data,
+  evaluationResults,
+}) => {
   const [activeSection, setActiveSection] = React.useState<string>(OVERVIEW_KEY);
   const [scoreType, setScoreType] = React.useState<ScoreType>('mean');
 
-  const settingsKeys = Object.keys(data.settings);
-  const allSections = [OVERVIEW_KEY, ...settingsKeys];
-
-  const topLevelFields = Object.entries(data).reduce<Record<string, unknown>>((acc, [key, val]) => {
-    if (key !== 'settings' && key !== 'scores' && !isScoreEntry(val)) {
-      acc[key] = val;
+  React.useEffect(() => {
+    if (isOpen) {
+      setActiveSection(OVERVIEW_KEY);
+      setScoreType('mean');
     }
-    return acc;
-  }, {});
+  }, [isOpen, data]);
+
+  const settingsKeys = Object.keys(data.settings);
+  const allSections = [
+    OVERVIEW_KEY,
+    ...settingsKeys,
+    ...(evaluationResults?.length ? [SAMPLE_QA_KEY] : []),
+  ];
+
+  const topLevelFields: Record<string, unknown> = {
+    name: data.name,
+    iteration: data.iteration,
+    // eslint-disable-next-line camelcase
+    max_combinations: data.max_combinations,
+    // eslint-disable-next-line camelcase
+    duration_seconds: data.duration_seconds,
+    // eslint-disable-next-line camelcase
+    final_score: data.final_score,
+  };
 
   const renderContent = (): React.ReactNode => {
     if (activeSection === OVERVIEW_KEY) {
@@ -139,11 +237,21 @@ const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({ isOpen, onClo
         </>
       );
     }
-    return <KeyValueList entries={data.settings[activeSection]} />;
+    if (activeSection === SAMPLE_QA_KEY && evaluationResults) {
+      return <SampleQAContent results={evaluationResults} />;
+    }
+    return <KeyValueList entries={settingsSectionEntries(data.settings, activeSection)} />;
   };
 
-  const getTabLabel = (key: string): string =>
-    key === OVERVIEW_KEY ? 'Pattern information' : humanize(key);
+  const getTabLabel = (key: string): string => {
+    if (key === OVERVIEW_KEY) {
+      return 'Pattern information';
+    }
+    if (key === SAMPLE_QA_KEY) {
+      return 'Sample Q&A';
+    }
+    return humanize(key);
+  };
 
   return (
     <Modal variant={ModalVariant.large} isOpen={isOpen} onClose={onClose}>
