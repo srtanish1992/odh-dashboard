@@ -1,5 +1,7 @@
 import React from 'react';
 import {
+  Card,
+  CardBody,
   Content,
   ContentVariants,
   DescriptionList,
@@ -29,6 +31,7 @@ import type {
   AutoRAGPatternScoreMetric,
   AutoRAGPatternSettings,
 } from '~/app/types/autoragPattern';
+import './PatternDetailsModal.scss';
 
 type PatternDetailsModalProps = {
   isOpen: boolean;
@@ -68,7 +71,7 @@ const ScoresList: React.FC<{
   scores: Record<string, AutoRAGPatternScoreMetric | undefined>;
   scoreType: ScoreType;
 }> = ({ scores, scoreType }) => (
-  <DescriptionList isHorizontal>
+  <DescriptionList isHorizontal horizontalTermWidthModifier={{ default: '20ch' }}>
     {Object.entries(scores).map(([key, score]) => {
       if (!score) {
         return null;
@@ -79,7 +82,7 @@ const ScoresList: React.FC<{
           <DescriptionListTerm>
             {humanize(key)} ({scoreTypeLabels[scoreType]})
           </DescriptionListTerm>
-          <DescriptionListDescription style={{ minWidth: 300 }}>
+          <DescriptionListDescription>
             <Progress
               value={value * 100}
               title=""
@@ -109,52 +112,43 @@ const SampleQAEntry: React.FC<{ result: AutoRAGEvaluationResult }> = ({ result }
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   return (
-    <div
-      style={{
-        border: '1px solid var(--pf-t--global--border--color--default)',
-        borderRadius: 'var(--pf-t--global--border--radius--small)',
-        padding: 'var(--pf-t--global--spacer--md)',
-        marginBottom: 'var(--pf-t--global--spacer--md)',
-      }}
-    >
-      <Flex>
-        <FlexItem flex={{ default: 'flex_1' }}>
-          <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
-            Question
-          </Content>
-          <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
-            {result.question}
-          </Content>
-        </FlexItem>
-        <FlexItem flex={{ default: 'flex_1' }}>
-          <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
-            Answer
-          </Content>
-          <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
-            {result.answer}
-          </Content>
-          <ExpandableSection
-            toggleText={`View expected answer (${result.correct_answers.length})`}
-            isExpanded={isExpanded}
-            onToggle={(_e, expanded) => setIsExpanded(expanded)}
-            isIndented
-          >
-            <Stack hasGutter>
-              {result.correct_answers.map((answer, i) => (
-                <StackItem key={`answer-${result.question_id}-${i}`}>
-                  <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
-                    Expected answer {i + 1}
-                  </Content>
-                  <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
-                    {answer}
-                  </Content>
-                </StackItem>
-              ))}
-            </Stack>
-          </ExpandableSection>
-        </FlexItem>
-      </Flex>
-    </div>
+    <Card isCompact>
+      <CardBody>
+        <Flex>
+          <FlexItem flex={{ default: 'flex_1' }}>
+            <Content component={ContentVariants.small}>
+              <strong>Question</strong>
+            </Content>
+            <Content component={ContentVariants.p}>{result.question}</Content>
+          </FlexItem>
+          <FlexItem flex={{ default: 'flex_1' }}>
+            <Content component={ContentVariants.small}>
+              <strong>Answer</strong>
+            </Content>
+            <Content component={ContentVariants.p}>{result.answer}</Content>
+            <ExpandableSection
+              toggleText={`View expected answer (${result.correct_answers.length})`}
+              isExpanded={isExpanded}
+              onToggle={(_e, expanded) => setIsExpanded(expanded)}
+              isIndented
+            >
+              <Stack hasGutter>
+                {result.correct_answers.map((answer, i) => (
+                  <StackItem key={`answer-${result.question_id}-${i}`}>
+                    <Content component={ContentVariants.small}>
+                      <strong>Expected answer {i + 1}</strong>
+                    </Content>
+                    <Content component={ContentVariants.p} className="autorag-pre-wrap">
+                      {answer}
+                    </Content>
+                  </StackItem>
+                ))}
+              </Stack>
+            </ExpandableSection>
+          </FlexItem>
+        </Flex>
+      </CardBody>
+    </Card>
   );
 };
 
@@ -208,33 +202,39 @@ const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
   const renderContent = (): React.ReactNode => {
     if (activeSection === OVERVIEW_KEY) {
       return (
-        <>
-          <KeyValueList entries={topLevelFields} />
-          <DescriptionList isHorizontal style={{ marginTop: 16 }}>
-            <DescriptionListGroup>
-              <DescriptionListTerm>Score type</DescriptionListTerm>
-              <DescriptionListDescription>
-                <Flex gap={{ default: 'gapLg' }}>
-                  {(['mean', 'ci_high', 'ci_low'] satisfies ScoreType[]).map((type) => (
-                    <FlexItem key={type}>
-                      <Radio
-                        id={`score-type-${type}`}
-                        name="score-type"
-                        label={scoreTypeLabels[type]}
-                        isChecked={scoreType === type}
-                        onChange={() => setScoreType(type)}
-                      />
-                    </FlexItem>
-                  ))}
-                </Flex>
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-          </DescriptionList>
-          <Title headingLevel="h4" style={{ marginTop: 24 }}>
-            Scores
-          </Title>
-          <ScoresList scores={data.scores} scoreType={scoreType} />
-        </>
+        <Stack hasGutter>
+          <StackItem>
+            <KeyValueList entries={topLevelFields} />
+          </StackItem>
+          <StackItem>
+            <DescriptionList isHorizontal>
+              <DescriptionListGroup>
+                <DescriptionListTerm>Score type</DescriptionListTerm>
+                <DescriptionListDescription>
+                  <Flex gap={{ default: 'gapLg' }}>
+                    {(['mean', 'ci_high', 'ci_low'] satisfies ScoreType[]).map((type) => (
+                      <FlexItem key={type}>
+                        <Radio
+                          id={`score-type-${type}`}
+                          name="score-type"
+                          label={scoreTypeLabels[type]}
+                          isChecked={scoreType === type}
+                          onChange={() => setScoreType(type)}
+                        />
+                      </FlexItem>
+                    ))}
+                  </Flex>
+                </DescriptionListDescription>
+              </DescriptionListGroup>
+            </DescriptionList>
+          </StackItem>
+          <StackItem>
+            <Title headingLevel="h4">Scores</Title>
+          </StackItem>
+          <StackItem>
+            <ScoresList scores={data.scores} scoreType={scoreType} />
+          </StackItem>
+        </Stack>
       );
     }
     if (activeSection === SAMPLE_QA_KEY && evaluationResults) {
