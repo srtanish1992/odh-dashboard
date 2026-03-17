@@ -133,27 +133,27 @@ const SampleQAEntry: React.FC<{ result: AutoRAGEvaluationResult }> = ({ result }
           <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
             {result.answer}
           </Content>
+          <ExpandableSection
+            toggleText={`View expected answer (${result.correct_answers.length})`}
+            isExpanded={isExpanded}
+            onToggle={(_e, expanded) => setIsExpanded(expanded)}
+            isIndented
+          >
+            <Stack hasGutter>
+              {result.correct_answers.map((answer, i) => (
+                <StackItem key={`answer-${result.question_id}-${i}`}>
+                  <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
+                    Expected answer {i + 1}
+                  </Content>
+                  <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
+                    {answer}
+                  </Content>
+                </StackItem>
+              ))}
+            </Stack>
+          </ExpandableSection>
         </FlexItem>
       </Flex>
-      <ExpandableSection
-        toggleText={`View expected answer (${result.correct_answers.length})`}
-        isExpanded={isExpanded}
-        onToggle={(_e, expanded) => setIsExpanded(expanded)}
-        isIndented
-      >
-        <Stack hasGutter>
-          {result.correct_answers.map((answer, i) => (
-            <StackItem key={`answer-${result.question_id}-${i}`}>
-              <Content component={ContentVariants.small} style={{ fontWeight: 600 }}>
-                Expected answer {i + 1}
-              </Content>
-              <Content component={ContentVariants.p} style={{ whiteSpace: 'pre-wrap' }}>
-                {answer}
-              </Content>
-            </StackItem>
-          ))}
-        </Stack>
-      </ExpandableSection>
     </div>
   );
 };
