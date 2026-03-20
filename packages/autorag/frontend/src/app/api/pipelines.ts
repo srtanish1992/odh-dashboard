@@ -1,6 +1,7 @@
 /* eslint-disable camelcase -- BFF API uses snake_case for total_size, next_page_token */
 import { APIOptions, handleRestFailures, isModArchResponse, restGET } from 'mod-arch-core';
 import type { PipelineDefinition, PipelineRun } from '~/app/types';
+import type { PatternWithEvaluation } from '~/app/types/autoragPattern';
 import { BFF_API_VERSION, URL_PREFIX } from '~/app/utilities/const';
 
 /** Response shape from BFF pipeline-runs API. Exported for hooks/tables that need pagination. */
@@ -84,6 +85,32 @@ export async function getPipelineRunFromBFF(
   );
   if (isModArchResponse<PipelineRun>(response)) {
     return response.data;
+  }
+  throw new Error('Invalid response format');
+}
+
+type PatternsApiResponse = {
+  patterns?: PatternWithEvaluation[];
+};
+
+export async function getPatternsByRunId(
+  hostPath: string,
+  runId: string,
+  namespace: string,
+  opts?: APIOptions,
+): Promise<PatternWithEvaluation[]> {
+  const queryParams: Record<string, string> = { namespace };
+
+  const response = await handleRestFailures(
+    restGET(
+      hostPath,
+      `${URL_PREFIX}/api/${BFF_API_VERSION}/pipeline-runs/${encodeURIComponent(runId)}/patterns`,
+      queryParams,
+      opts ?? {},
+    ),
+  );
+  if (isModArchResponse<PatternsApiResponse>(response)) {
+    return response.data.patterns ?? [];
   }
   throw new Error('Invalid response format');
 }

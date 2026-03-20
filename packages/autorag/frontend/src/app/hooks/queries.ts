@@ -1,7 +1,8 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { getLlamaStackModels } from '~/app/api/k8s';
-import { getPipelineRunFromBFF } from '~/app/api/pipelines';
+import { getPatternsByRunId, getPipelineRunFromBFF } from '~/app/api/pipelines';
 import { LlamaStackModelType, LlamaStackModelsResponse, PipelineRun } from '~/app/types';
+import type { PatternWithEvaluation } from '~/app/types/autoragPattern';
 
 export function useExperimentsQuery(): UseQueryResult<never[], Error> {
   return useQuery({
@@ -74,6 +75,17 @@ export function useLlamaStackModelsQuery(
     select: modelType
       ? (data) => ({ models: data.models.filter((m) => m.type === modelType) })
       : undefined,
+  });
+}
+
+export function usePatternsQuery(
+  runId?: string,
+  namespace?: string,
+): UseQueryResult<PatternWithEvaluation[], Error> {
+  return useQuery({
+    queryKey: ['patterns', runId, namespace],
+    queryFn: ({ signal }) => getPatternsByRunId('', runId!, namespace!, { signal }),
+    enabled: !!runId && !!namespace,
   });
 }
 

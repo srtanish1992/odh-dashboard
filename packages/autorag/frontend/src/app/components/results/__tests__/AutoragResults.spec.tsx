@@ -15,6 +15,11 @@ jest.mock('~/app/topology/useAutoRAGTaskTopology', () => ({
   useAutoRAGTaskTopology: jest.fn().mockReturnValue([{ id: 'task-1' }, { id: 'task-2' }]),
 }));
 
+jest.mock('~/app/hooks/queries', () => ({
+  ...jest.requireActual('~/app/hooks/queries'),
+  usePatternsQuery: jest.fn().mockReturnValue({ data: [], isLoading: false }),
+}));
+
 const mockPipelineRun: PipelineRun = {
   run_id: 'run-123',
   display_name: 'My AutoRAG Run',

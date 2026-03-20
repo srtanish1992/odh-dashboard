@@ -50,6 +50,9 @@ func main() {
 	// Llama Stack configuration
 	flag.StringVar(&cfg.LlamaStackURL, "llama-stack-url", getEnvAsString("LLAMA_STACK_URL", ""), "LlamaStack service URL override (optional, for development)")
 
+	// S3 configuration flags
+	flag.StringVar(&cfg.S3EndpointOverride, "s3-endpoint-override", getEnvAsString("S3_ENDPOINT_OVERRIDE", ""), "Override S3 endpoint from secrets (e.g., http://localhost:9000 for local port-forward)")
+
 	// TLS configuration flags
 	flag.BoolVar(&cfg.InsecureSkipVerify, "insecure-skip-verify", getEnvAsBool("INSECURE_SKIP_VERIFY", false), "Skip TLS certificate verification (useful for development, default: false)")
 

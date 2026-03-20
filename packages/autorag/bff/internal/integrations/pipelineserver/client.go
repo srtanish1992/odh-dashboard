@@ -37,6 +37,7 @@ type PipelineServerClientInterface interface {
 	ListPipelines(ctx context.Context, filter string) (*models.KFPipelinesResponse, error)
 	ListPipelineVersions(ctx context.Context, pipelineID string) (*models.KFPipelineVersionsResponse, error)
 	GetPipelineVersion(ctx context.Context, pipelineID, versionID string) (*models.KFPipelineVersion, error)
+	ListArtifacts(ctx context.Context, namespace string, maxResultSize int32) (*models.KFArtifactsResponse, error)
 }
 
 // maxPipelineErrorBodySize limits the size of error response bodies to prevent memory exhaustion.
@@ -358,6 +359,54 @@ func (c *RealPipelineServerClient) ListPipelines(ctx context.Context, filter str
 		Pipelines: allPipelines,
 		TotalSize: totalSize,
 	}, nil
+}
+
+// ListArtifacts retrieves artifacts from the KFP v2beta1 artifacts API, filtered by namespace.
+func (c *RealPipelineServerClient) ListArtifacts(ctx context.Context, namespace string, maxResultSize int32) (*models.KFArtifactsResponse, error) {
+	queryParams := url.Values{}
+	if namespace != "" {
+		queryParams.Set("namespace", namespace)
+	}
+	if maxResultSize > 0 {
+		queryParams.Set("max_result_size", fmt.Sprintf("%d", maxResultSize))
+	}
+	queryParams.Set("order_by", "create_time desc")
+
+	apiURL := fmt.Sprintf("%s/apis/v2beta1/artifacts?%s", c.baseURL, queryParams.Encode())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if c.authToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.authToken))
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		limitedReader := io.LimitReader(resp.Body, maxPipelineErrorBodySize)
+		body, _ := io.ReadAll(limitedReader)
+		_, _ = io.Copy(io.Discard, resp.Body)
+
+		errorMsg := string(body)
+		if len(body) == maxPipelineErrorBodySize {
+			errorMsg += " (truncated)"
+		}
+		return nil, &HTTPError{StatusCode: resp.StatusCode, Message: errorMsg}
+	}
+
+	var response models.KFArtifactsResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxSuccessBodySize)).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &response, nil
 }
 
 // ListPipelineVersions retrieves all versions for a specific pipeline from the KFP v2beta1 API,

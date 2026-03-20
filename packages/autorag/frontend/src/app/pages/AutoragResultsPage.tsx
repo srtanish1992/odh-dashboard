@@ -22,7 +22,7 @@ function AutoragResultsPage(): React.JSX.Element {
       provideChildrenPadding
       removeChildrenTopPadding
     >
-      <AutoragResults pipelineRun={pipelineRun} />
+      <AutoragResults pipelineRun={pipelineRun} namespace={namespace} />
     </ApplicationsPage>
   );
 }

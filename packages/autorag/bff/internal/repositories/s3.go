@@ -22,10 +22,19 @@ type S3Credentials struct {
 	Bucket          string // Optional bucket name from secret (AWS_S3_BUCKET)
 }
 
-type S3Repository struct{}
+type S3Repository struct {
+	endpointOverride string
+}
 
 func NewS3Repository() *S3Repository {
 	return &S3Repository{}
+}
+
+// NewS3RepositoryWithOverride creates an S3Repository that replaces the endpoint
+// read from Kubernetes secrets with the provided override URL. This is useful for
+// local development when in-cluster S3 endpoints are unreachable.
+func NewS3RepositoryWithOverride(endpointOverride string) *S3Repository {
+	return &S3Repository{endpointOverride: endpointOverride}
 }
 
 // GetS3Credentials retrieves S3 credentials from a Kubernetes secret
@@ -80,7 +89,53 @@ func (r *S3Repository) GetS3Credentials(
 		return nil, fmt.Errorf("secret '%s' missing required field: AWS_S3_ENDPOINT", secretName)
 	}
 
+	if r.endpointOverride != "" {
+		creds.EndpointURL = r.endpointOverride
+	}
+
 	return creds, nil
+}
+
+// newS3Client creates an S3 client configured for the given credentials.
+func newS3Client(creds *S3Credentials) *s3.Client {
+	cfg := aws.Config{
+		Region:      creds.Region,
+		Credentials: credentials.NewStaticCredentialsProvider(creds.AccessKeyID, creds.SecretAccessKey, ""),
+	}
+	return s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(creds.EndpointURL)
+		o.UsePathStyle = true
+	})
+}
+
+// ListS3Objects lists object keys under a given prefix in an S3 bucket.
+func (r *S3Repository) ListS3Objects(
+	ctx context.Context,
+	creds *S3Credentials,
+	bucket string,
+	prefix string,
+) ([]string, error) {
+	s3Client := newS3Client(creds)
+
+	var keys []string
+	paginator := s3.NewListObjectsV2Paginator(s3Client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error listing S3 objects with prefix %q: %w", prefix, err)
+		}
+		for _, obj := range page.Contents {
+			if obj.Key != nil {
+				keys = append(keys, *obj.Key)
+			}
+		}
+	}
+
+	return keys, nil
 }
 
 // GetS3Object retrieves an object from S3 using transfer manager for optimized downloading
@@ -91,18 +146,7 @@ func (r *S3Repository) GetS3Object(
 	bucket string,
 	key string,
 ) (io.Reader, string, error) {
-	// Create AWS config with credentials
-	cfg := aws.Config{
-		Region:      creds.Region,
-		Credentials: credentials.NewStaticCredentialsProvider(creds.AccessKeyID, creds.SecretAccessKey, ""),
-	}
-
-	// Create S3 client
-	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String(creds.EndpointURL)
-		// Enable path-style addressing for S3-compatible services like MinIO
-		o.UsePathStyle = true
-	})
+	s3Client := newS3Client(creds)
 
 	// Create transfer manager for optimized downloads
 	transferClient := transfermanager.New(s3Client)

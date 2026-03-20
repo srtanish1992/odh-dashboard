@@ -65,3 +65,8 @@ export type AutoRAGEvaluationResult = {
   answer_contexts: AutoRAGEvaluationAnswerContext[];
   scores: AutoRAGEvaluationScores;
 };
+
+export type PatternWithEvaluation = {
+  pattern: AutoRAGPattern;
+  evaluation_results: AutoRAGEvaluationResult[];
+};

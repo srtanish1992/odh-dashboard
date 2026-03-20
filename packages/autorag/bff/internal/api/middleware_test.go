@@ -71,7 +71,7 @@ func TestAttachLlamaStackClientFromSecret(t *testing.T) {
 	t.Run("should return 400 when secretName query parameter is missing", func(t *testing.T) {
 		app := App{
 			llamaStackClientFactory: lsmocks.NewMockClientFactory(),
-			repositories:            repositories.NewRepositories(slog.Default()),
+			repositories:            repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 		}
 
 		req := httptest.NewRequest("GET", "/api/v1/lsd/models", nil)
@@ -89,7 +89,7 @@ func TestAttachLlamaStackClientFromSecret(t *testing.T) {
 	t.Run("should return 400 when secretName is invalid DNS-1123 label", func(t *testing.T) {
 		app := App{
 			llamaStackClientFactory: lsmocks.NewMockClientFactory(),
-			repositories:            repositories.NewRepositories(slog.Default()),
+			repositories:            repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 		}
 
 		req := httptest.NewRequest("GET", "/api/v1/lsd/models?secretName=INVALID_NAME", nil)
@@ -108,7 +108,7 @@ func TestAttachLlamaStackClientFromSecret(t *testing.T) {
 		app := App{
 			config:                  config.EnvConfig{MockLSClient: true},
 			llamaStackClientFactory: lsmocks.NewMockClientFactory(),
-			repositories:            repositories.NewRepositories(slog.Default()),
+			repositories:            repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 		}
 
 		req := httptest.NewRequest("GET", "/api/v1/lsd/models?secretName=my-secret", nil)
@@ -133,7 +133,7 @@ func TestAttachLlamaStackClientFromSecret(t *testing.T) {
 				LlamaStackURL: testLlamaStackURL,
 			},
 			llamaStackClientFactory: mockFactory,
-			repositories:            repositories.NewRepositories(slog.Default()),
+			repositories:            repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 		}
 
 		req := httptest.NewRequest("GET", "/api/v1/lsd/models?secretName=my-secret", nil)
@@ -155,7 +155,7 @@ func TestAttachLlamaStackClientFromSecret(t *testing.T) {
 				AuthMethod: config.AuthMethodDisabled,
 			},
 			llamaStackClientFactory: lsmocks.NewMockClientFactory(),
-			repositories:            repositories.NewRepositories(slog.Default()),
+			repositories:            repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 			logger:                  slog.Default(),
 		}
 
@@ -176,7 +176,7 @@ func TestAttachLlamaStackClientFromSecret(t *testing.T) {
 		app := App{
 			config:                  config.EnvConfig{LlamaStackURL: testLlamaStackURL},
 			llamaStackClientFactory: mockFactory,
-			repositories:            repositories.NewRepositories(slog.Default()),
+			repositories:            repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 		}
 
 		req := httptest.NewRequest("GET", "/api/v1/lsd/models?secretName=my-secret", nil)
@@ -197,7 +197,7 @@ func TestAttachLlamaStackClientFromSecret(t *testing.T) {
 	t.Run("should return error when namespace is missing from context", func(t *testing.T) {
 		app := App{
 			llamaStackClientFactory: lsmocks.NewMockClientFactory(),
-			repositories:            repositories.NewRepositories(slog.Default()),
+			repositories:            repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 		}
 
 		req := httptest.NewRequest("GET", "/api/v1/lsd/models?secretName=my-secret", nil)

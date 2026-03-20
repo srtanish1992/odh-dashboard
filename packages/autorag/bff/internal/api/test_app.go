@@ -30,7 +30,7 @@ func NewTestApp( //nolint:unused
 	repos *repositories.Repositories,
 ) *App {
 	if repos == nil {
-		repos = repositories.NewRepositories(logger)
+		repos = repositories.NewRepositories(logger, cfg)
 	}
 	return &App{
 		config:                      cfg,

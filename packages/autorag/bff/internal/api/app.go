@@ -145,7 +145,7 @@ func NewApp(cfg config.EnvConfig, logger *slog.Logger) (*App, error) {
 		kubernetesClientFactory:     k8sFactory,
 		llamaStackClientFactory:     llamaStackClientFactory,
 		pipelineServerClientFactory: pipelineServerClientFactory,
-		repositories:                repositories.NewRepositories(logger),
+		repositories:                repositories.NewRepositories(logger, cfg),
 		testEnv:                     testEnv,
 		rootCAs:                     rootCAs,
 	}
@@ -183,6 +183,7 @@ func (app *App) Routes() http.Handler {
 	apiRouter.GET(constants.LSDModelsPath, app.AttachNamespace(app.RequireAccessToService(app.AttachLlamaStackClientFromSecret(app.LlamaStackModelsHandler))))
 
 	// Pipeline Runs API endpoints (pipeline server is auto-discovered)
+	apiRouter.GET(PipelineRunsPath+"/:runId/patterns", app.AttachNamespace(app.RequireAccessToService(app.AttachPipelineServerClient(app.PatternsHandler))))
 	apiRouter.GET(PipelineRunsPath+"/:runId", app.AttachNamespace(app.RequireAccessToService(app.AttachPipelineServerClient(app.AttachDiscoveredPipeline(app.PipelineRunHandler)))))
 	apiRouter.GET(PipelineRunsPath, app.AttachNamespace(app.RequireAccessToService(app.AttachPipelineServerClient(app.AttachDiscoveredPipeline(app.PipelineRunsHandler)))))
 	apiRouter.POST(PipelineRunsPath, app.AttachNamespace(app.RequireAccessToService(app.AttachPipelineServerClient(app.AttachDiscoveredPipeline(app.CreatePipelineRunHandler)))))

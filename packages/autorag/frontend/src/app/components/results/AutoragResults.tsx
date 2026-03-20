@@ -1,10 +1,12 @@
 import React from 'react';
 import {
+  Bullseye,
   Dropdown,
   DropdownItem,
   DropdownList,
   MenuToggle,
   MenuToggleElement,
+  Spinner,
   Stack,
   StackItem,
   Title,
@@ -13,16 +15,16 @@ import type { PipelineRun } from '~/app/types';
 import type { RunDetailsKF } from '~/app/types/pipeline';
 import PipelineTopology from '~/app/topology/PipelineTopology';
 import { useAutoRAGTaskTopology } from '~/app/topology/useAutoRAGTaskTopology';
-import { mockAutoRAGEvaluationResults } from '~/app/mocks/mockAutoRAGEvaluationResults';
-import { mockAutoRAGPatterns } from '~/app/mocks/mockAutoRAGPatterns';
+import { usePatternsQuery } from '~/app/hooks/queries';
 import PatternDetailsModal from './PatternDetailsModal';
 import './AutoragResults.scss';
 
 type AutoragResultsProps = {
   pipelineRun?: PipelineRun;
+  namespace?: string;
 };
 
-function AutoragResults({ pipelineRun }: AutoragResultsProps): React.JSX.Element {
+function AutoragResults({ pipelineRun, namespace }: AutoragResultsProps): React.JSX.Element {
   const [selectedIds, setSelectedIds] = React.useState<string[] | undefined>();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
@@ -30,9 +32,15 @@ function AutoragResults({ pipelineRun }: AutoragResultsProps): React.JSX.Element
 
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const runDetails = pipelineRun?.run_details as RunDetailsKF | undefined;
-
   const nodes = useAutoRAGTaskTopology(pipelineRun?.pipeline_spec, runDetails);
-  const selectedPattern = mockAutoRAGPatterns[selectedIndex];
+
+  const { data: patternsData, isLoading: patternsLoading } = usePatternsQuery(
+    pipelineRun?.run_id,
+    namespace,
+  );
+
+  const patterns = patternsData ?? [];
+  const selectedEntry = patterns[selectedIndex];
 
   return (
     <Stack hasGutter>
@@ -48,34 +56,42 @@ function AutoragResults({ pipelineRun }: AutoragResultsProps): React.JSX.Element
         />
       </StackItem>
       <StackItem>
-        <Dropdown
-          isOpen={isDropdownOpen}
-          onSelect={(_e, value) => {
-            setSelectedIndex(Number(value));
-            setIsDropdownOpen(false);
-            setIsModalOpen(true);
-          }}
-          onOpenChange={setIsDropdownOpen}
-          toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-            <MenuToggle ref={toggleRef} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              View pattern details — {selectedPattern.name}
-            </MenuToggle>
-          )}
-        >
-          <DropdownList>
-            {mockAutoRAGPatterns.map((pattern, i) => (
-              <DropdownItem key={pattern.name} value={i}>
-                {pattern.name} (score: {pattern.final_score.toFixed(2)})
-              </DropdownItem>
-            ))}
-          </DropdownList>
-        </Dropdown>
-        <PatternDetailsModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          data={selectedPattern}
-          evaluationResults={mockAutoRAGEvaluationResults}
-        />
+        {patternsLoading ? (
+          <Bullseye>
+            <Spinner size="lg" />
+          </Bullseye>
+        ) : patterns.length > 0 ? (
+          <>
+            <Dropdown
+              isOpen={isDropdownOpen}
+              onSelect={(_e, value) => {
+                setSelectedIndex(Number(value));
+                setIsDropdownOpen(false);
+                setIsModalOpen(true);
+              }}
+              onOpenChange={setIsDropdownOpen}
+              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle ref={toggleRef} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+                  View pattern details — {selectedEntry.pattern.name}
+                </MenuToggle>
+              )}
+            >
+              <DropdownList>
+                {patterns.map((entry, i) => (
+                  <DropdownItem key={entry.pattern.name} value={i}>
+                    {entry.pattern.name} (score: {entry.pattern.final_score.toFixed(2)})
+                  </DropdownItem>
+                ))}
+              </DropdownList>
+            </Dropdown>
+            <PatternDetailsModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              data={selectedEntry.pattern}
+              evaluationResults={selectedEntry.evaluation_results}
+            />
+          </>
+        ) : null}
       </StackItem>
     </Stack>
   );

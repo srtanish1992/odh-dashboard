@@ -26,7 +26,7 @@ func newMinimalTestApp() *App {
 			AutoRAGPipelineNamePrefix: "autorag",
 		},
 		logger:       slog.Default(),
-		repositories: repositories.NewRepositories(slog.Default()),
+		repositories: repositories.NewRepositories(slog.Default(), config.EnvConfig{}),
 	}
 }
 

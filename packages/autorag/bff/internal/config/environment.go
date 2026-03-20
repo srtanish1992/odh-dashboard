@@ -119,6 +119,12 @@ type EnvConfig struct {
 	// Default: "autorag"
 	AutoRAGPipelineNamePrefix string
 
+	// ─── S3 ─────────────────────────────────────────────────────
+	// S3EndpointOverride, when non-empty, replaces the AWS_S3_ENDPOINT value
+	// read from secrets. Useful for local development when the in-cluster MinIO
+	// address is unreachable and a kubectl port-forward is used instead.
+	S3EndpointOverride string
+
 	// ─── TLS ────────────────────────────────────────────────────
 	// TLS verification settings for HTTP client connections to the Client
 	// InsecureSkipVerify when true, skips TLS certificate verification (useful for development/local setups)

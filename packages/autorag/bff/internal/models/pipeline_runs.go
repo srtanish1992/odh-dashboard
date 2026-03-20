@@ -171,3 +171,35 @@ type KFPipelineVersionsResponse struct {
 	TotalSize        int32               `json:"total_size,omitempty"`        // Total number of versions available
 	NextPageToken    string              `json:"next_page_token,omitempty"`   // Pagination token for next page
 }
+
+// KFArtifact represents a single artifact from the KFP v2beta1 artifacts API.
+type KFArtifact struct {
+	ArtifactID    string `json:"artifact_id"`
+	DisplayName   string `json:"display_name,omitempty"`
+	URI           string `json:"uri,omitempty"`
+	StoragePath   string `json:"storage_path,omitempty"`
+	ArtifactType  string `json:"artifact_type,omitempty"`
+	ArtifactSize  string `json:"artifact_size,omitempty"`
+	Namespace     string `json:"namespace,omitempty"`
+	CreatedAt     string `json:"created_at,omitempty"`
+	LastUpdatedAt string `json:"last_updated_at,omitempty"`
+}
+
+// KFArtifactsResponse represents the response from GET /apis/v2beta1/artifacts.
+type KFArtifactsResponse struct {
+	Artifacts     []KFArtifact `json:"artifacts,omitempty"`
+	TotalSize     int32        `json:"total_size,omitempty"`
+	NextPageToken string       `json:"next_page_token,omitempty"`
+}
+
+// PatternWithEvaluation pairs a pattern's configuration with its evaluation results.
+// Both fields are raw JSON to avoid coupling the BFF to the pattern schema.
+type PatternWithEvaluation struct {
+	Pattern           json.RawMessage `json:"pattern"`
+	EvaluationResults json.RawMessage `json:"evaluation_results,omitempty"`
+}
+
+// PatternsData is the response payload for the patterns endpoint.
+type PatternsData struct {
+	Patterns []PatternWithEvaluation `json:"patterns"`
+}

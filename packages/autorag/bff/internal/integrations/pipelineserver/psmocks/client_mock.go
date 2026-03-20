@@ -684,6 +684,13 @@ func (m *MockPipelineServerClient) ListPipelineVersions(ctx context.Context, pip
 	}, nil
 }
 
+// ListArtifacts returns an empty artifacts list for mock mode.
+func (m *MockPipelineServerClient) ListArtifacts(_ context.Context, _ string, _ int32) (*models.KFArtifactsResponse, error) {
+	return &models.KFArtifactsResponse{
+		Artifacts: []models.KFArtifact{},
+	}, nil
+}
+
 // MockClientFactory creates mock pipeline server clients
 type MockClientFactory struct{}
 
